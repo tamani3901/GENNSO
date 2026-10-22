@@ -1,0 +1,1025 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>元素周期表パズルゲーム (Periodic Table Puzzle)</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Canvas Confetti CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700;800&family=Roboto+Mono:wght@500;700&display=swap');
+
+        body {
+            font-family: 'M PLUS Rounded 1c', sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+            user-select: none;
+        }
+
+        .font-mono-num {
+            font-family: 'Roboto Mono', monospace;
+        }
+
+        /* Category Colors */
+        .cat-nonmetal      { background-color: #1e3a8a; border-color: #3b82f6; text-color: #93c5fd; } /* 非金属 */
+        .cat-noblegas      { background-color: #4c1d95; border-color: #8b5cf6; text-color: #c4b5fd; } /* 貴ガス */
+        .cat-alkali        { background-color: #831843; border-color: #ec4899; text-color: #fbcfe8; } /* アルカリ金属 */
+        .cat-alkalineearth { background-color: #7c2d12; border-color: #f97316; text-color: #ffedd5; } /* アルカリ土類 */
+        .cat-metalloid     { background-color: #14532d; border-color: #22c55e; text-color: #bbf7d0; } /* 半金属 */
+        .cat-halogen       { background-color: #701a75; border-color: #d946ef; text-color: #f5d0fe; } /* ハロゲン */
+        .cat-posttransition{ background-color: #134e4a; border-color: #14b8a6; text-color: #99f6e4; } /* その他の金属 */
+        .cat-transition    { background-color: #312e81; border-color: #6366f1; text-color: #c7d2fe; } /* 遷移金属 */
+        .cat-lanthanide    { background-color: #365314; border-color: #84cc16; text-color: #d9f99d; } /* ランタノイド */
+        .cat-actinide      { background-color: #713f12; border-color: #eab308; text-color: #fef08a; } /* アクチノイド */
+
+        /* Category Color Badges */
+        .badge-nonmetal      { background-color: #2563eb; color: #ffffff; }
+        .badge-noblegas      { background-color: #7c3aed; color: #ffffff; }
+        .badge-alkali        { background-color: #db2777; color: #ffffff; }
+        .badge-alkalineearth { background-color: #ea580c; color: #ffffff; }
+        .badge-metalloid     { background-color: #16a34a; color: #ffffff; }
+        .badge-halogen       { background-color: #c026d3; color: #ffffff; }
+        .badge-posttransition{ background-color: #0d9488; color: #ffffff; }
+        .badge-transition    { background-color: #4f46e5; color: #ffffff; }
+
+        /* Custom Periodic Grid 18 Columns */
+        .periodic-grid {
+            display: grid;
+            grid-template-columns: repeat(18, minmax(0, 1fr));
+            gap: 4px;
+        }
+
+        /* Glassmorphism Effect */
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .glass-card {
+            background: rgba(51, 65, 85, 0.5);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            transition: all 0.2s ease-in-out;
+        }
+
+        .glass-card:hover {
+            background: rgba(51, 65, 85, 0.8);
+            border-color: rgba(99, 102, 241, 0.5);
+            transform: translateY(-2px);
+        }
+
+        /* Pulse / Highlight Effects */
+        .cell-selected {
+            ring: 3px solid #6366f1;
+            box-shadow: 0 0 15px rgba(99, 102, 241, 0.6);
+            transform: scale(1.05);
+            z-index: 10;
+        }
+
+        .cell-correct {
+            animation: pulse-green 0.5s ease-out;
+            background-color: rgba(22, 101, 52, 0.8) !important;
+            border-color: #22c55e !important;
+        }
+
+        .cell-incorrect {
+            animation: shake 0.4s ease-in-out;
+            background-color: rgba(153, 27, 27, 0.8) !important;
+            border-color: #ef4444 !important;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-4px); }
+            40%, 80% { transform: translateX(4px); }
+        }
+
+        @keyframes pulse-green {
+            0% { transform: scale(1); box-shadow: 0 0 0 rgba(34, 197, 94, 0); }
+            50% { transform: scale(1.1); box-shadow: 0 0 20px rgba(34, 197, 94, 0.8); }
+            100% { transform: scale(1); box-shadow: 0 0 0 rgba(34, 197, 94, 0); }
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between antialiased selection:bg-indigo-500 selection:text-white">
+
+    <!-- Header Navigation -->
+    <header class="w-full glass-panel sticky top-0 z-30 px-4 py-3 flex justify-between items-center border-b border-slate-700/50 shadow-lg">
+        <div class="flex items-center space-x-3 cursor-pointer" onclick="showHomeScreen()">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center shadow-md">
+                <i class="fa-solid font-bold text-xl text-white">Pt</i>
+            </div>
+            <div>
+                <h1 class="text-xl font-extrabold tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 via-purple-300 to-pink-300">
+                    元素パズルゲーム
+                </h1>
+                <p class="text-xs text-slate-400 hidden sm:block">Periodic Table Elements Quiz</p>
+            </div>
+        </div>
+
+        <div id="header-controls" class="flex items-center space-x-2">
+            <!-- Full Periodic Table Modal Trigger -->
+            <button onclick="openFullTableModal()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs sm:text-sm font-medium border border-slate-600 transition flex items-center gap-1.5 shadow-sm">
+                <i class="fa-solid fa-table"></i>
+                <span class="hidden sm:inline">完全版 </span>周期表
+            </button>
+            
+            <button id="btn-back-home" onclick="showHomeScreen()" class="hidden px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs sm:text-sm font-medium transition flex items-center gap-1.5 shadow-md">
+                <i class="fa-solid fa-house"></i>
+                <span>ホーム</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="container mx-auto px-2 sm:px-4 py-4 flex-grow flex flex-col justify-center items-center">
+
+        <!-- ================= HOME SCREEN ================= -->
+        <section id="home-screen" class="w-full max-w-4xl flex flex-col items-center gap-8 py-4">
+            
+            <div class="text-center space-y-3 max-w-2xl">
+                <span class="px-3 py-1 rounded-full text-xs font-semibold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                    化学知識 &amp; 記憶力トレーニング
+                </span>
+                <h2 class="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
+                    周期表のマスを埋めて<br class="sm:hidden"><span class="text-indigo-400">元素パズル</span>を完成させよう！
+                </h2>
+                <p class="text-slate-300 text-sm sm:text-base leading-relaxed">
+                    原子番号 1〜36（水素〜クリプトン）および重要元素（銀、ヨウ素、キセノン、白金、金、ラドン）の全41元素に対応。プレイモードを選択してください。
+                </p>
+            </div>
+
+            <!-- Mode Selection Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 w-full">
+                
+                <!-- Mode 1 -->
+                <div onclick="startGame(1)" class="glass-card p-5 rounded-2xl cursor-pointer flex flex-col justify-between space-y-4 border-l-4 border-l-blue-500">
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="px-2.5 py-0.5 rounded text-xs font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30">モード 1</span>
+                            <i class="fa-solid fa-hand-pointer text-blue-400"></i>
+                        </div>
+                        <h3 class="text-lg font-bold text-white">記号 → 名前 (選択)</h3>
+                        <p class="text-xs text-slate-300">
+                            マスに<strong class="text-blue-300">「元素記号」</strong>が表示されます。候補から正しい<strong class="text-blue-300">「日本語名」</strong>を選んでパズルを埋めます。
+                        </p>
+                    </div>
+                    <button class="w-full py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs transition flex items-center justify-center gap-2">
+                        スタート <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </div>
+
+                <!-- Mode 2 -->
+                <div onclick="startGame(2)" class="glass-card p-5 rounded-2xl cursor-pointer flex flex-col justify-between space-y-4 border-l-4 border-l-emerald-500">
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="px-2.5 py-0.5 rounded text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">モード 2</span>
+                            <i class="fa-solid fa-font text-emerald-400"></i>
+                        </div>
+                        <h3 class="text-lg font-bold text-white">名前 → 記号 (選択)</h3>
+                        <p class="text-xs text-slate-300">
+                            マスに<strong class="text-emerald-300">「日本語名」</strong>が表示されます。候補から正しい<strong class="text-emerald-300">「元素記号」</strong>を選んで配置します。
+                        </p>
+                    </div>
+                    <button class="w-full py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs transition flex items-center justify-center gap-2">
+                        スタート <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </div>
+
+                <!-- Mode 3 -->
+                <div onclick="startGame(3)" class="glass-card p-5 rounded-2xl cursor-pointer flex flex-col justify-between space-y-4 border-l-4 border-l-purple-500">
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="px-2.5 py-0.5 rounded text-xs font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30">モード 3</span>
+                            <i class="fa-solid fa-shuffle text-purple-400"></i>
+                        </div>
+                        <h3 class="text-lg font-bold text-white">ランダムミックス (選択)</h3>
+                        <p class="text-xs text-slate-300">
+                            各マスごとに「記号」または「名前」がランダムに出題されます。柔軟な判断力が試されます。
+                        </p>
+                    </div>
+                    <button class="w-full py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-medium text-xs transition flex items-center justify-center gap-2">
+                        スタート <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </div>
+
+                <!-- Mode 4 -->
+                <div onclick="startGame(4)" class="glass-card p-5 rounded-2xl cursor-pointer flex flex-col justify-between space-y-4 border-l-4 border-l-amber-500">
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="px-2.5 py-0.5 rounded text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">モード 4 (※①)</span>
+                            <i class="fa-solid fa-keyboard text-amber-400"></i>
+                        </div>
+                        <h3 class="text-lg font-bold text-white">名前 直接入力</h3>
+                        <p class="text-xs text-slate-300">
+                            表示された記号に対し<strong class="text-amber-300">日本語名を入力</strong>します。（白金/プラチナ、金/ゴールドなどエイリアス対応）
+                        </p>
+                    </div>
+                    <button class="w-full py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-medium text-xs transition flex items-center justify-center gap-2">
+                        スタート <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </div>
+
+                <!-- Mode 5 -->
+                <div onclick="startGame(5)" class="glass-card p-5 rounded-2xl cursor-pointer flex flex-col justify-between space-y-4 border-l-4 border-l-rose-500 md:col-span-2 lg:col-span-1">
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="px-2.5 py-0.5 rounded text-xs font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30">モード 5 (※②)</span>
+                            <i class="fa-solid fa-pen-to-square text-rose-400"></i>
+                        </div>
+                        <h3 class="text-lg font-bold text-white">記号 直接入力</h3>
+                        <p class="text-xs text-slate-300">
+                            表示された名前に対し<strong class="text-rose-300">元素記号を入力</strong>します。（大文字・小文字どちらでも判定可能）
+                        </p>
+                    </div>
+                    <button class="w-full py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-medium text-xs transition flex items-center justify-center gap-2">
+                        スタート <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </div>
+
+            </div>
+
+            <!-- Home Footer Info -->
+            <div class="w-full glass-panel p-4 rounded-2xl text-xs text-slate-400 flex flex-col md:flex-row justify-between items-center gap-4">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-circle-info text-indigo-400 text-base"></i>
+                    <span>対象元素: 原子番号 1〜36, 47(Ag), 53(I), 54(Xe), 78(Pt), 79(Au), 86(Rn) 計41個</span>
+                </div>
+                <button onclick="openFullTableModal()" class="text-indigo-300 hover:text-white underline font-medium">
+                    完全版周期表を今すぐ確認する
+                </button>
+            </div>
+        </section>
+
+        <!-- ================= GAMEPLAY SCREEN ================= -->
+        <section id="game-screen" class="hidden w-full flex-col gap-4 max-w-7xl animate-fade-in">
+            
+            <!-- Game Top Info Bar -->
+            <div class="w-full glass-panel p-3 sm:p-4 rounded-2xl flex flex-wrap items-center justify-between gap-3 shadow-md">
+                <div class="flex items-center space-x-3">
+                    <span id="current-mode-badge" class="px-3 py-1 rounded-lg text-xs font-bold bg-indigo-600 text-white shadow-sm">
+                        モード 1
+                    </span>
+                    <div class="text-xs sm:text-sm text-slate-300">
+                        正解数: <span id="score-counter" class="font-bold text-emerald-400 text-base font-mono-num">0</span> / <span id="total-target-count">41</span>
+                    </div>
+                </div>
+
+                <!-- Timer & Progress Bar -->
+                <div class="flex items-center gap-4 flex-grow max-w-xs mx-auto md:mx-0">
+                    <div class="w-full bg-slate-800 rounded-full h-2.5 overflow-hidden border border-slate-700">
+                        <div id="progress-bar" class="bg-gradient-to-r from-indigo-500 to-emerald-400 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+                    </div>
+                    <div class="text-xs font-mono-num text-slate-300 flex items-center gap-1">
+                        <i class="fa-regular fa-clock text-slate-400"></i>
+                        <span id="timer-display">00:00</span>
+                    </div>
+                </div>
+
+                <!-- Game Controls -->
+                <div class="flex items-center gap-2">
+                    <button onclick="giveUpAndShowAnswers()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-400 hover:text-amber-300 text-xs font-medium border border-slate-700 transition flex items-center gap-1">
+                        <i class="fa-solid fa-lightbulb"></i>
+                        <span>解答表示</span>
+                    </button>
+                    <button onclick="resetCurrentGame()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-medium border border-slate-700 transition flex items-center gap-1">
+                        <i class="fa-solid fa-rotate-right"></i>
+                        <span>やり直し</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Legend Bar -->
+            <div class="w-full glass-panel p-2.5 rounded-xl flex flex-wrap items-center justify-center gap-1.5 sm:gap-3 text-[10px] sm:text-xs">
+                <span class="text-slate-400 font-bold mr-1">属性:</span>
+                <span class="px-2 py-0.5 rounded badge-nonmetal">非金属</span>
+                <span class="px-2 py-0.5 rounded badge-noblegas">貴ガス</span>
+                <span class="px-2 py-0.5 rounded badge-alkali">アルカリ金属</span>
+                <span class="px-2 py-0.5 rounded badge-alkalineearth">アルカリ土類</span>
+                <span class="px-2 py-0.5 rounded badge-transition">遷移金属</span>
+                <span class="px-2 py-0.5 rounded badge-posttransition">その他の金属</span>
+                <span class="px-2 py-0.5 rounded badge-metalloid">半金属</span>
+                <span class="px-2 py-0.5 rounded badge-halogen">ハロゲン</span>
+            </div>
+
+            <!-- Periodic Table Interactive Grid -->
+            <div class="w-full overflow-x-auto pb-2 pt-1">
+                <div id="game-periodic-grid" class="periodic-grid min-w-[800px] lg:min-w-[980px]">
+                    <!-- Generated via JS -->
+                </div>
+            </div>
+
+            <!-- Candidate Tray / Selection Panel (For Modes 1, 2, 3) -->
+            <div id="selection-candidate-panel" class="w-full glass-panel p-4 rounded-2xl flex flex-col gap-3">
+                <div class="flex items-center justify-between text-xs text-slate-300 border-b border-slate-700/60 pb-2">
+                    <span class="font-bold flex items-center gap-1.5">
+                        <i class="fa-solid fa-list-check text-indigo-400"></i>
+                        <span id="candidate-panel-title">マスを選択してから、対応する解答をタップしてください</span>
+                    </span>
+                    <span id="candidate-count-info" class="text-slate-400 font-mono-num"></span>
+                </div>
+                <!-- Candidate Chips Wrapper -->
+                <div id="candidate-chips-container" class="flex flex-wrap gap-2 max-h-40 overflow-y-auto p-1">
+                    <!-- Candidate Chips injected by JS -->
+                </div>
+            </div>
+
+            <!-- Direct Input Form Bar (For Modes 4 & 5) -->
+            <div id="direct-input-panel" class="hidden w-full glass-panel p-4 rounded-2xl flex flex-col sm:flex-row items-center gap-3">
+                <div class="flex items-center gap-3 w-full sm:w-auto">
+                    <div id="active-cell-badge" class="w-12 h-12 rounded-xl bg-slate-800 border border-slate-600 flex flex-col items-center justify-center font-bold text-white shrink-0">
+                        <span class="text-[9px] text-indigo-400 font-mono-num" id="input-target-num">#-</span>
+                        <span class="text-sm font-bold" id="input-target-prompt">選択</span>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-400">選択中のマスに入力:</p>
+                        <p class="text-sm font-bold text-white" id="input-target-label">パズルマスをタップしてください</p>
+                    </div>
+                </div>
+
+                <form id="input-answer-form" onsubmit="handleDirectInputSubmit(event)" class="flex gap-2 w-full sm:flex-1">
+                    <input type="text" id="direct-answer-input" placeholder="回答を入力 (例: ヘリウム / He)..." autocomplete="off" disabled
+                           class="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 text-sm font-medium transition">
+                    <button type="submit" id="direct-answer-btn" disabled
+                            class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-800 disabled:text-slate-600 text-white font-bold text-sm transition shrink-0 flex items-center gap-1.5">
+                        <i class="fa-solid fa-paper-plane"></i>
+                        <span>回答</span>
+                    </button>
+                </form>
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="w-full py-3 text-center text-xs text-slate-500 border-t border-slate-800/80">
+        元素パズルゲーム &copy; 2026 Interactive Chemistry Learning
+    </footer>
+
+    <!-- ================= FULL PERIODIC TABLE MODAL ================= -->
+    <div id="full-table-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-2 sm:p-4 animate-fade-in">
+        <div class="glass-panel w-full max-w-6xl max-h-[92vh] rounded-2xl flex flex-col overflow-hidden shadow-2xl border border-slate-700">
+            
+            <!-- Modal Header -->
+            <div class="px-5 py-4 border-b border-slate-700/80 flex items-center justify-between bg-slate-900/60">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-table text-indigo-400 text-lg"></i>
+                    <h3 class="text-lg font-bold text-white">完全版 元素周期表</h3>
+                </div>
+                <button onclick="closeFullTableModal()" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition flex items-center justify-center">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <!-- Modal Content (Periodic Table) -->
+            <div class="p-4 overflow-auto flex-grow space-y-4">
+                
+                <!-- Legend inside Modal -->
+                <div class="flex flex-wrap items-center justify-center gap-2 text-xs">
+                    <span class="px-2.5 py-1 rounded badge-nonmetal font-medium">非金属</span>
+                    <span class="px-2.5 py-1 rounded badge-noblegas font-medium">貴ガス</span>
+                    <span class="px-2.5 py-1 rounded badge-alkali font-medium">アルカリ金属</span>
+                    <span class="px-2.5 py-1 rounded badge-alkalineearth font-medium">アルカリ土類金属</span>
+                    <span class="px-2.5 py-1 rounded badge-transition font-medium">遷移金属</span>
+                    <span class="px-2.5 py-1 rounded badge-posttransition font-medium">その他の金属</span>
+                    <span class="px-2.5 py-1 rounded badge-metalloid font-medium">半金属</span>
+                    <span class="px-2.5 py-1 rounded badge-halogen font-medium">ハロゲン</span>
+                </div>
+
+                <!-- Complete Table Grid -->
+                <div class="min-w-[850px]">
+                    <div id="full-periodic-grid" class="periodic-grid">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="px-5 py-3 border-t border-slate-700/80 bg-slate-900/60 flex justify-end">
+                <button onclick="closeFullTableModal()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-600 transition">
+                    閉じる
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ================= VICTORY / COMPLETION MODAL ================= -->
+    <div id="victory-modal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="glass-panel w-full max-w-md rounded-3xl p-6 text-center space-y-6 border border-emerald-500/40 shadow-2xl relative overflow-hidden">
+            
+            <div class="w-20 h-20 mx-auto rounded-full bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-white text-3xl shadow-lg shadow-emerald-500/30">
+                <i class="fa-solid fa-trophy animate-bounce"></i>
+            </div>
+
+            <div class="space-y-2">
+                <h3 class="text-2xl font-black text-white tracking-tight">パズルクリア！おめでとう！</h3>
+                <p class="text-xs text-slate-300">すべての対象元素マスを正確に完成させました！</p>
+            </div>
+
+            <!-- Stats Box -->
+            <div class="bg-slate-900/80 rounded-2xl p-4 border border-slate-800 space-y-3">
+                <div class="flex justify-between items-center text-xs">
+                    <span class="text-slate-400">挑戦モード:</span>
+                    <span id="vic-mode-name" class="font-bold text-indigo-300">モード 1</span>
+                </div>
+                <div class="flex justify-between items-center text-xs">
+                    <span class="text-slate-400">完成元素数:</span>
+                    <span class="font-bold text-emerald-400 font-mono-num">41 / 41</span>
+                </div>
+                <div class="flex justify-between items-center text-xs">
+                    <span class="text-slate-400">クリアタイム:</span>
+                    <span id="vic-clear-time" class="font-bold text-white font-mono-num">00:00</span>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex gap-3">
+                <button onclick="closeVictoryModal(); showHomeScreen();" class="flex-1 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs border border-slate-700 transition">
+                    ホームへ戻る
+                </button>
+                <button onclick="closeVictoryModal(); resetCurrentGame();" class="flex-1 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-lg transition">
+                    もう一度遊ぶ
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+
+    <!-- ================= JAVASCRIPT LOGIC ================= -->
+    <script>
+        /**
+         * Element Master Data
+         * Grid Coordinates (row 1..7, col 1..18)
+         */
+        const ELEMENTS_DATA = [
+            // Period 1
+            { num: 1, sym: "H", name: "水素", aliases: ["水素", "すいそ"], cat: "nonmetal", period: 1, group: 1 },
+            { num: 2, sym: "He", name: "ヘリウム", aliases: ["ヘリウム"], cat: "noblegas", period: 1, group: 18 },
+
+            // Period 2
+            { num: 3, sym: "Li", name: "リチウム", aliases: ["リチウム"], cat: "alkali", period: 2, group: 1 },
+            { num: 4, sym: "Be", name: "ベリリウム", aliases: ["ベリリウム"], cat: "alkalineearth", period: 2, group: 2 },
+            { num: 5, sym: "B", name: "ホウ素", aliases: ["ホウ素", "ほうそ"], cat: "metalloid", period: 2, group: 13 },
+            { num: 6, sym: "C", name: "炭素", aliases: ["炭素", "たんそ"], cat: "nonmetal", period: 2, group: 14 },
+            { num: 7, sym: "N", name: "窒素", aliases: ["窒素", "ちっそ"], cat: "nonmetal", period: 2, group: 15 },
+            { num: 8, sym: "O", name: "酸素", aliases: ["酸素", "さんそ"], cat: "nonmetal", period: 2, group: 16 },
+            { num: 9, sym: "F", name: "フッ素", aliases: ["フッ素", "ふっそ"], cat: "halogen", period: 2, group: 17 },
+            { num: 10, sym: "Ne", name: "ネオン", aliases: ["ネオン"], cat: "noblegas", period: 2, group: 18 },
+
+            // Period 3
+            { num: 11, sym: "Na", name: "ナトリウム", aliases: ["ナトリウム"], cat: "alkali", period: 3, group: 1 },
+            { num: 12, sym: "Mg", name: "マグネシウム", aliases: ["マグネシウム"], cat: "alkalineearth", period: 3, group: 2 },
+            { num: 13, sym: "Al", name: "アルミニウム", aliases: ["アルミニウム"], cat: "posttransition", period: 3, group: 13 },
+            { num: 14, sym: "Si", name: "ケイ素", aliases: ["ケイ素", "けいそ", "シリコン"], cat: "metalloid", period: 3, group: 14 },
+            { num: 15, sym: "P", name: "リン", aliases: ["リン", "りん"], cat: "nonmetal", period: 3, group: 15 },
+            { num: 16, sym: "S", name: "硫黄", aliases: ["硫黄", "いおう"], cat: "nonmetal", period: 3, group: 16 },
+            { num: 17, sym: "Cl", name: "塩素", aliases: ["塩素", "えんそ"], cat: "halogen", period: 3, group: 17 },
+            { num: 18, sym: "Ar", name: "アルゴン", aliases: ["アルゴン"], cat: "noblegas", period: 3, group: 18 },
+
+            // Period 4
+            { num: 19, sym: "K", name: "カリウム", aliases: ["カリウム"], cat: "alkali", period: 4, group: 1 },
+            { num: 20, sym: "Ca", name: "カルシウム", aliases: ["カルシウム"], cat: "alkalineearth", period: 4, group: 2 },
+            { num: 21, sym: "Sc", name: "スカンジウム", aliases: ["スカンジウム"], cat: "transition", period: 4, group: 3 },
+            { num: 22, sym: "Ti", name: "チタン", aliases: ["チタン"], cat: "transition", period: 4, group: 4 },
+            { num: 23, sym: "V", name: "バナジウム", aliases: ["バナジウム"], cat: "transition", period: 4, group: 5 },
+            { num: 24, sym: "Cr", name: "クロム", aliases: ["クロム"], cat: "transition", period: 4, group: 6 },
+            { num: 25, sym: "Mn", name: "マンガン", aliases: ["マンガン"], cat: "transition", period: 4, group: 7 },
+            { num: 26, sym: "Fe", name: "鉄", aliases: ["鉄", "てつ"], cat: "transition", period: 4, group: 8 },
+            { num: 27, sym: "Co", name: "コバルト", aliases: ["コバルト"], cat: "transition", period: 4, group: 9 },
+            { num: 28, sym: "Ni", name: "ニッケル", aliases: ["ニッケル"], cat: "transition", period: 4, group: 10 },
+            { num: 29, sym: "Cu", name: "銅", aliases: ["銅", "どう"], cat: "transition", period: 4, group: 11 },
+            { num: 30, sym: "Zn", name: "亜鉛", aliases: ["亜鉛", "あえん"], cat: "transition", period: 4, group: 12 },
+            { num: 31, sym: "Ga", name: "ガリウム", aliases: ["ガリウム"], cat: "posttransition", period: 4, group: 13 },
+            { num: 32, sym: "Ge", name: "ゲルマニウム", aliases: ["ゲルマニウム"], cat: "metalloid", period: 4, group: 14 },
+            { num: 33, sym: "As", name: "ヒ素", aliases: ["ヒ素", "ひそ"], cat: "metalloid", period: 4, group: 15 },
+            { num: 34, sym: "Se", name: "セレン", aliases: ["セレン"], cat: "nonmetal", period: 4, group: 16 },
+            { num: 35, sym: "Br", name: "臭素", aliases: ["臭素", "しゅうそ"], cat: "halogen", period: 4, group: 17 },
+            { num: 36, sym: "Kr", name: "クリプトン", aliases: ["クリプトン"], cat: "noblegas", period: 4, group: 18 },
+
+            // Selected Specific Target Elements
+            { num: 47, sym: "Ag", name: "銀", aliases: ["銀", "ぎん", "シルバー"], cat: "transition", period: 5, group: 11 },
+            { num: 53, sym: "I", name: "ヨウ素", aliases: ["ヨウ素", "ようそ"], cat: "halogen", period: 5, group: 17 },
+            { num: 54, sym: "Xe", name: "キセノン", aliases: ["キセノン"], cat: "noblegas", period: 5, group: 18 },
+            { num: 78, sym: "Pt", name: "白金", aliases: ["白金", "はっきん", "プラチナ"], cat: "transition", period: 6, group: 10 },
+            { num: 79, sym: "Au", name: "金", aliases: ["金", "きん", "ゴールド"], cat: "transition", period: 6, group: 11 },
+            { num: 86, sym: "Rn", name: "ラドン", aliases: ["ラドン"], cat: "noblegas", period: 6, group: 18 }
+        ];
+
+        // Specific Target Atomic Numbers list
+        const TARGET_ATOMIC_NUMBERS = new Set([
+            ...Array.from({length: 36}, (_, i) => i + 1),
+            47, 53, 54, 78, 79, 86
+        ]);
+
+        // Category Color Mapping Helper
+        const CATEGORY_CLASSES = {
+            nonmetal: "cat-nonmetal border-blue-500/50 text-blue-200",
+            noblegas: "cat-noblegas border-purple-500/50 text-purple-200",
+            alkali: "cat-alkali border-pink-500/50 text-pink-200",
+            alkalineearth: "cat-alkalineearth border-orange-500/50 text-orange-200",
+            metalloid: "cat-metalloid border-green-500/50 text-green-200",
+            halogen: "cat-halogen border-fuchsia-500/50 text-fuchsia-200",
+            posttransition: "cat-posttransition border-teal-500/50 text-teal-200",
+            transition: "cat-transition border-indigo-500/50 text-indigo-200"
+        };
+
+        // State Variables
+        let currentMode = 1;
+        let selectedCellNum = null;
+        let gameState = {}; // Map of num -> { solved: bool, currentVal: string, modePromptType: 'sym'|'name' }
+        let timerInterval = null;
+        let secondsElapsed = 0;
+
+        // Initialize Game Application
+        window.onload = function() {
+            renderFullPeriodicTable();
+        };
+
+        /**
+         * Start or Restart Game with chosen Mode (1-5)
+         */
+        function startGame(mode) {
+            currentMode = mode;
+            selectedCellNum = null;
+            secondsElapsed = 0;
+            clearInterval(timerInterval);
+
+            // Update UI Badges & Buttons
+            document.getElementById("btn-back-home").classList.remove("hidden");
+            document.getElementById("home-screen").classList.add("hidden");
+            document.getElementById("game-screen").classList.remove("hidden");
+            document.getElementById("game-screen").classList.add("flex");
+
+            const modeNames = {
+                1: "モード 1: 記号 → 名前 (選択)",
+                2: "モード 2: 名前 → 記号 (選択)",
+                3: "モード 3: ランダムミックス (選択)",
+                4: "モード 4: 名前 直接入力 (※①)",
+                5: "モード 5: 記号 直接入力 (※②)"
+            };
+            document.getElementById("current-mode-badge").innerText = modeNames[mode];
+
+            // Toggle Panel Visibility based on Mode Type (Selection vs Input)
+            if (mode <= 3) {
+                document.getElementById("selection-candidate-panel").classList.remove("hidden");
+                document.getElementById("direct-input-panel").classList.add("hidden");
+            } else {
+                document.getElementById("selection-candidate-panel").classList.add("hidden");
+                document.getElementById("direct-input-panel").classList.remove("hidden");
+                document.getElementById("direct-input-panel").classList.add("flex");
+            }
+
+            // Initialize Game State
+            gameState = {};
+            ELEMENTS_DATA.forEach(elem => {
+                let promptType = 'sym'; // Default show symbol, guess name
+                if (mode === 2) promptType = 'name'; // Show name, guess symbol
+                if (mode === 3) promptType = Math.random() < 0.5 ? 'sym' : 'name';
+                if (mode === 5) promptType = 'name'; // Show name, type symbol
+
+                gameState[elem.num] = {
+                    solved: false,
+                    currentVal: null,
+                    promptType: promptType
+                };
+            });
+
+            // Build Grid & Candidate Trays
+            renderGameGrid();
+            if (mode <= 3) {
+                renderCandidateChips();
+            }
+
+            updateScoreAndProgress();
+            startTimer();
+        }
+
+        /**
+         * Render Main Game Periodic Table Grid
+         */
+        function renderGameGrid() {
+            const gridContainer = document.getElementById("game-periodic-grid");
+            gridContainer.innerHTML = "";
+
+            // Create a 7 rows x 18 cols matrix map
+            const matrix = Array.from({ length: 7 }, () => Array(18).fill(null));
+
+            ELEMENTS_DATA.forEach(elem => {
+                if (elem.period <= 7 && elem.group <= 18) {
+                    matrix[elem.period - 1][elem.group - 1] = elem;
+                }
+            });
+
+            for (let r = 0; r < 7; r++) {
+                for (let c = 0; c < 18; c++) {
+                    const elem = matrix[r][c];
+                    const cellDiv = document.createElement("div");
+
+                    if (!elem) {
+                        // Empty cell spacer
+                        cellDiv.className = "w-full h-14 sm:h-16 rounded-lg border border-transparent";
+                    } else {
+                        const isTarget = TARGET_ATOMIC_NUMBERS.has(elem.num);
+                        const catClass = CATEGORY_CLASSES[elem.cat] || "bg-slate-800 border-slate-700 text-slate-300";
+                        const state = gameState[elem.num];
+
+                        cellDiv.id = `game-cell-${elem.num}`;
+                        cellDiv.className = `relative w-full h-14 sm:h-16 rounded-xl border p-1 flex flex-col justify-between items-center transition-all duration-200 ${catClass} ${isTarget ? 'cursor-pointer hover:border-white shadow-sm' : 'opacity-30 cursor-not-allowed border-slate-800'}`;
+
+                        if (isTarget) {
+                            cellDiv.onclick = () => handleCellClick(elem.num);
+                        }
+
+                        // Content Rendering
+                        let contentHTML = `<span class="absolute top-1 left-1.5 text-[9px] sm:text-[10px] font-mono-num font-bold opacity-80">${elem.num}</span>`;
+
+                        if (state.solved) {
+                            // Solved state shows completed element badge
+                            contentHTML += `
+                                <div class="my-auto flex flex-col items-center">
+                                    <span class="text-xs sm:text-sm font-bold tracking-tight text-emerald-300">${elem.sym}</span>
+                                    <span class="text-[9px] sm:text-[10px] font-medium text-emerald-100">${elem.name}</span>
+                                </div>
+                                <span class="absolute bottom-1 right-1 text-[9px] text-emerald-400"><i class="fa-solid fa-circle-check"></i></span>
+                            `;
+                        } else {
+                            // Puzzle Unsolved State - Depending on promptType
+                            if (state.promptType === 'sym') {
+                                // Cell shows Symbol, Player needs Name
+                                contentHTML += `
+                                    <div class="my-auto flex flex-col items-center">
+                                        <span class="text-sm sm:text-base font-extrabold text-white">${elem.sym}</span>
+                                        <span class="text-[9px] sm:text-[10px] text-indigo-200/80 font-bold bg-slate-900/40 px-1 rounded mt-0.5">❓名前</span>
+                                    </div>
+                                `;
+                            } else {
+                                // Cell shows Name, Player needs Symbol
+                                contentHTML += `
+                                    <div class="my-auto flex flex-col items-center text-center">
+                                        <span class="text-[10px] sm:text-xs font-bold text-white line-clamp-1">${elem.name}</span>
+                                        <span class="text-[9px] text-indigo-200/80 font-bold bg-slate-900/40 px-1 rounded mt-0.5">❓記号</span>
+                                    </div>
+                                `;
+                            }
+                        }
+
+                        cellDiv.innerHTML = contentHTML;
+                    }
+                    gridContainer.appendChild(cellDiv);
+                }
+            }
+        }
+
+        /**
+         * Handle Click on a Puzzle Grid Cell
+         */
+        function handleCellClick(num) {
+            const state = gameState[num];
+            if (state.solved) return; // Ignore if solved
+
+            // Clear previous highlight
+            if (selectedCellNum) {
+                const prevCell = document.getElementById(`game-cell-${selectedCellNum}`);
+                if (prevCell) prevCell.classList.remove("cell-selected");
+            }
+
+            selectedCellNum = num;
+            const currentCell = document.getElementById(`game-cell-${num}`);
+            if (currentCell) currentCell.classList.add("cell-selected");
+
+            const elem = ELEMENTS_DATA.find(e => e.num === num);
+
+            // Update Direct Input Controls if in Mode 4 or 5
+            if (currentMode >= 4) {
+                const inputElem = document.getElementById("direct-answer-input");
+                const submitBtn = document.getElementById("direct-answer-btn");
+                const targetNumDisplay = document.getElementById("input-target-num");
+                const targetPromptDisplay = document.getElementById("input-target-prompt");
+                const targetLabelDisplay = document.getElementById("input-target-label");
+
+                inputElem.disabled = false;
+                submitBtn.disabled = false;
+                inputElem.value = "";
+                inputElem.focus();
+
+                targetNumDisplay.innerText = `#${elem.num}`;
+                
+                if (currentMode === 4) {
+                    targetPromptDisplay.innerText = elem.sym;
+                    targetLabelDisplay.innerText = `記号「${elem.sym}」の日本語名を入力してください`;
+                    inputElem.placeholder = "例: 白金 または プラチナ...";
+                } else if (currentMode === 5) {
+                    targetPromptDisplay.innerText = "記号";
+                    targetLabelDisplay.innerText = `「${elem.name}」の元素記号を入力してください`;
+                    inputElem.placeholder = "例: Pt または pt...";
+                }
+            }
+        }
+
+        /**
+         * Render Candidate Chips Tray for Modes 1, 2, 3
+         */
+        function renderCandidateChips() {
+            const container = document.getElementById("candidate-chips-container");
+            container.innerHTML = "";
+
+            // Collect Unsolved Target Elements
+            const unsolved = ELEMENTS_DATA.filter(e => TARGET_ATOMIC_NUMBERS.has(e.num) && !gameState[e.num].solved);
+
+            document.getElementById("candidate-count-info").innerText = `残り: ${unsolved.length} 項目`;
+
+            // Build Options List
+            let candidateList = unsolved.map(elem => {
+                const state = gameState[elem.num];
+                // If prompt is sym, candidate needed is Name. If prompt is name, candidate needed is Symbol.
+                const valueText = (state.promptType === 'sym') ? elem.name : elem.sym;
+                return {
+                    num: elem.num,
+                    text: valueText,
+                    type: state.promptType
+                };
+            });
+
+            // Shuffle Candidates for randomness
+            candidateList.sort(() => Math.random() - 0.5);
+
+            candidateList.forEach(cand => {
+                const chip = document.createElement("button");
+                chip.className = "px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-indigo-600 text-white font-medium text-xs sm:text-sm border border-slate-700 hover:border-indigo-400 transition shadow-sm active:scale-95";
+                chip.innerText = cand.text;
+                chip.onclick = () => submitCandidateAnswer(cand);
+                container.appendChild(chip);
+            });
+        }
+
+        /**
+         * Submit Answer from Candidate Selection Tray (Modes 1, 2, 3)
+         */
+        function submitCandidateAnswer(cand) {
+            if (!selectedCellNum) {
+                alert("先に周期表のマスを選択してください。");
+                return;
+            }
+
+            const targetElem = ELEMENTS_DATA.find(e => e.num === selectedCellNum);
+            const targetState = gameState[selectedCellNum];
+
+            // Check if selected chip matches selected cell
+            let isCorrect = false;
+            if (cand.num === selectedCellNum) {
+                isCorrect = true;
+            }
+
+            const cellDiv = document.getElementById(`game-cell-${selectedCellNum}`);
+
+            if (isCorrect) {
+                targetState.solved = true;
+                cellDiv.classList.remove("cell-selected");
+                cellDiv.classList.add("cell-correct");
+
+                setTimeout(() => {
+                    cellDiv.classList.remove("cell-correct");
+                    renderGameGrid();
+                    renderCandidateChips();
+                    updateScoreAndProgress();
+                    checkVictoryCondition();
+                }, 400);
+
+                selectedCellNum = null;
+            } else {
+                // Incorrect Flash
+                cellDiv.classList.add("cell-incorrect");
+                setTimeout(() => {
+                    cellDiv.classList.remove("cell-incorrect");
+                }, 500);
+            }
+        }
+
+        /**
+         * Handle Direct Text Input Submission (Modes 4 & 5)
+         */
+        function handleDirectInputSubmit(event) {
+            event.preventDefault();
+            if (!selectedCellNum) return;
+
+            const inputElem = document.getElementById("direct-answer-input");
+            const rawVal = inputElem.value.trim();
+            if (!rawVal) return;
+
+            const targetElem = ELEMENTS_DATA.find(e => e.num === selectedCellNum);
+            const targetState = gameState[selectedCellNum];
+            let isCorrect = false;
+
+            if (currentMode === 4) {
+                // Mode 4: Symbol -> Name input (Check Aliases: e.g., 白金, プラチナ)
+                const normalized = rawVal.toLowerCase();
+                isCorrect = targetElem.aliases.some(alias => alias.toLowerCase() === normalized);
+            } else if (currentMode === 5) {
+                // Mode 5: Name -> Symbol input (Case-insensitive: e.g., "he", "He", "HE")
+                isCorrect = (rawVal.toLowerCase() === targetElem.sym.toLowerCase());
+            }
+
+            const cellDiv = document.getElementById(`game-cell-${selectedCellNum}`);
+
+            if (isCorrect) {
+                targetState.solved = true;
+                cellDiv.classList.remove("cell-selected");
+                cellDiv.classList.add("cell-correct");
+
+                inputElem.value = "";
+                inputElem.disabled = true;
+                document.getElementById("direct-answer-btn").disabled = true;
+
+                setTimeout(() => {
+                    cellDiv.classList.remove("cell-correct");
+                    renderGameGrid();
+                    updateScoreAndProgress();
+                    checkVictoryCondition();
+                }, 400);
+
+                selectedCellNum = null;
+            } else {
+                cellDiv.classList.add("cell-incorrect");
+                setTimeout(() => {
+                    cellDiv.classList.remove("cell-incorrect");
+                }, 500);
+            }
+        }
+
+        /**
+         * Score & Progress Tracker
+         */
+        function updateScoreAndProgress() {
+            const total = TARGET_ATOMIC_NUMBERS.size;
+            let solvedCount = 0;
+
+            TARGET_ATOMIC_NUMBERS.forEach(num => {
+                if (gameState[num] && gameState[num].solved) solvedCount++;
+            });
+
+            document.getElementById("score-counter").innerText = solvedCount;
+            document.getElementById("total-target-count").innerText = total;
+
+            const percent = Math.round((solvedCount / total) * 100);
+            document.getElementById("progress-bar").style.width = `${percent}%`;
+        }
+
+        /**
+         * Timer Logic
+         */
+        function startTimer() {
+            secondsElapsed = 0;
+            updateTimerDisplay();
+            timerInterval = setInterval(() => {
+                secondsElapsed++;
+                updateTimerDisplay();
+            }, 1000);
+        }
+
+        function updateTimerDisplay() {
+            const mins = Math.floor(secondsElapsed / 60).toString().padStart(2, '0');
+            const secs = (secondsElapsed % 60).toString().padStart(2, '0');
+            document.getElementById("timer-display").innerText = `${mins}:${secs}`;
+        }
+
+        /**
+         * Give Up & Reveal Answers
+         */
+        function giveUpAndShowAnswers() {
+            if (confirm("全ての対象元素の正解を表示しますか？")) {
+                TARGET_ATOMIC_NUMBERS.forEach(num => {
+                    if (gameState[num]) gameState[num].solved = true;
+                });
+                renderGameGrid();
+                if (currentMode <= 3) renderCandidateChips();
+                updateScoreAndProgress();
+                clearInterval(timerInterval);
+            }
+        }
+
+        /**
+         * Reset Current Game
+         */
+        function resetCurrentGame() {
+            startGame(currentMode);
+        }
+
+        /**
+         * Check Game Victory Condition
+         */
+        function checkVictoryCondition() {
+            const total = TARGET_ATOMIC_NUMBERS.size;
+            let solvedCount = 0;
+            TARGET_ATOMIC_NUMBERS.forEach(num => {
+                if (gameState[num] && gameState[num].solved) solvedCount++;
+            });
+
+            if (solvedCount === total) {
+                clearInterval(timerInterval);
+
+                // Confetti Animation
+                if (typeof confetti === 'function') {
+                    confetti({
+                        particleCount: 120,
+                        spread: 70,
+                        origin: { y: 0.6 }
+                    });
+                }
+
+                // Show Victory Modal
+                document.getElementById("vic-mode-name").innerText = `モード ${currentMode}`;
+                document.getElementById("vic-clear-time").innerText = document.getElementById("timer-display").innerText;
+                document.getElementById("victory-modal").classList.remove("hidden");
+            }
+        }
+
+        function closeVictoryModal() {
+            document.getElementById("victory-modal").classList.add("hidden");
+        }
+
+        /**
+         * Render Complete Periodic Table inside Modal
+         */
+        function renderFullPeriodicTable() {
+            const container = document.getElementById("full-periodic-grid");
+            container.innerHTML = "";
+
+            const matrix = Array.from({ length: 7 }, () => Array(18).fill(null));
+
+            ELEMENTS_DATA.forEach(elem => {
+                if (elem.period <= 7 && elem.group <= 18) {
+                    matrix[elem.period - 1][elem.group - 1] = elem;
+                }
+            });
+
+            for (let r = 0; r < 7; r++) {
+                for (let c = 0; c < 18; c++) {
+                    const elem = matrix[r][c];
+                    const cellDiv = document.createElement("div");
+
+                    if (!elem) {
+                        cellDiv.className = "w-full h-14 rounded-lg border border-transparent";
+                    } else {
+                        const catClass = CATEGORY_CLASSES[elem.cat] || "bg-slate-800 border-slate-700 text-slate-300";
+                        const isTarget = TARGET_ATOMIC_NUMBERS.has(elem.num);
+
+                        cellDiv.className = `relative w-full h-14 rounded-xl border p-1 flex flex-col justify-between items-center ${catClass} ${isTarget ? 'ring-1 ring-amber-400/80 shadow-md' : 'opacity-80'}`;
+
+                        cellDiv.innerHTML = `
+                            <span class="absolute top-1 left-1.5 text-[9px] font-mono-num font-bold opacity-80">${elem.num}</span>
+                            <div class="my-auto flex flex-col items-center">
+                                <span class="text-sm font-extrabold text-white">${elem.sym}</span>
+                                <span class="text-[9px] font-medium text-slate-200">${elem.name}</span>
+                            </div>
+                        `;
+                    }
+                    container.appendChild(cellDiv);
+                }
+            }
+        }
+
+        /**
+         * View State Switchers
+         */
+        function showHomeScreen() {
+            clearInterval(timerInterval);
+            document.getElementById("btn-back-home").classList.add("hidden");
+            document.getElementById("game-screen").classList.add("hidden");
+            document.getElementById("game-screen").classList.remove("flex");
+            document.getElementById("home-screen").classList.remove("hidden");
+        }
+
+        function openFullTableModal() {
+            document.getElementById("full-table-modal").classList.remove("hidden");
+        }
+
+        function closeFullTableModal() {
+            document.getElementById("full-table-modal").classList.add("hidden");
+        }
+    </script>
+</body>
+</html>
